@@ -71,6 +71,7 @@ export function normalizeLinkPillStyle(style: LinkVariantStyle) {
       : Math.max(0, value);
   return {
     enabled: style.pill === true || hasConfig,
+    wrap: config.wrap === true,
     borderColor: config.borderColor ?? 'transparent',
     label: config.label ?? '',
     iconUri: config.iconUri ?? '',

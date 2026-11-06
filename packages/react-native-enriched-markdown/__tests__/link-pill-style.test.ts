@@ -21,6 +21,7 @@ it('requires an explicit pill opt-in and preserves ordinary link overrides', () 
     fontFamily: 'Example',
     pill: {
       enabled: false,
+      wrap: false,
       label: '',
       iconUri: '',
       borderRadius: 8,
@@ -41,6 +42,7 @@ it('normalizes presentation fields and orders specific URL patterns first', () =
       '^https://example.com/': {
         fontFamily: 'Custom',
         pill: {
+          wrap: true,
           label: 'Example',
           iconUri: 'file:///bundle/icon.png',
           paddingHorizontal: 12,
@@ -58,6 +60,7 @@ it('normalizes presentation fields and orders specific URL patterns first', () =
     fontFamily: 'Custom',
     pill: {
       enabled: true,
+      wrap: true,
       label: 'Example',
       iconUri: 'file:///bundle/icon.png',
       paddingHorizontal: 12,

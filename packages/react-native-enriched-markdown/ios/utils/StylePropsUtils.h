@@ -562,7 +562,8 @@ BOOL applyMarkdownStyleToConfig(StyleConfig *config, const MarkdownStyle &newSty
         if (newVariant.pattern != oldVariant.pattern || newVariant.color != oldVariant.color ||
             newVariant.underline != oldVariant.underline || newVariant.backgroundColor != oldVariant.backgroundColor ||
             newVariant.fontFamily != oldVariant.fontFamily || newVariant.pill.enabled != oldVariant.pill.enabled ||
-            newVariant.pill.label != oldVariant.pill.label || newVariant.pill.iconUri != oldVariant.pill.iconUri ||
+            newVariant.pill.wrap != oldVariant.pill.wrap || newVariant.pill.label != oldVariant.pill.label ||
+            newVariant.pill.iconUri != oldVariant.pill.iconUri ||
             newVariant.pill.iconTintColor != oldVariant.pill.iconTintColor ||
             newVariant.pill.borderRadius != oldVariant.pill.borderRadius ||
             newVariant.pill.paddingHorizontal != oldVariant.pill.paddingHorizontal ||
@@ -586,6 +587,7 @@ BOOL applyMarkdownStyleToConfig(StyleConfig *config, const MarkdownStyle &newSty
         variant.fontFamily = [[NSString alloc] initWithUTF8String:entry.fontFamily.c_str()];
         if (entry.pill.enabled) {
           LinkPillConfig *pill = [[LinkPillConfig alloc] init];
+          pill.wrap = entry.pill.wrap;
           pill.label = [[NSString alloc] initWithUTF8String:entry.pill.label.c_str()];
           pill.iconUri = [[NSString alloc] initWithUTF8String:entry.pill.iconUri.c_str()];
           pill.iconTintColor = entry.pill.iconTintColor ? RCTUIColorFromSharedColor(entry.pill.iconTintColor) : nil;

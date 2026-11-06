@@ -93,6 +93,7 @@ interface LinkStyleInternal {
 
 interface LinkPillInternal {
   enabled: boolean;
+  wrap: boolean;
   label: string;
   iconUri: string;
   iconTintColor?: ColorValue;

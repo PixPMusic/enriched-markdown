@@ -1,5 +1,6 @@
 package com.swmansion.enriched.markdown.renderer
 
+import android.icu.text.BreakIterator
 import android.text.SpannableStringBuilder
 import android.text.TextPaint
 import android.text.style.ReplacementSpan
@@ -9,12 +10,14 @@ import com.swmansion.enriched.markdown.spans.LinkSpan
 import com.swmansion.enriched.markdown.spans.SpoilerSpan
 import com.swmansion.enriched.markdown.utils.text.extensions.applyBlockStyleFont
 import com.swmansion.enriched.markdown.utils.text.span.SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE
+import java.util.Locale
 
 class LinkRenderer(
   private val config: RendererConfig,
 ) : NodeRenderer {
   // Reused to resolve each pill's typeface; a renderer serves one render at a time.
   private val fontProbe = TextPaint()
+  private val characterBoundaries by lazy { BreakIterator.getCharacterInstance(Locale.ROOT) }
 
   override fun render(
     node: MarkdownASTNode,
@@ -31,20 +34,32 @@ class LinkRenderer(
       if (variant?.pill != null && canPresentAsPill(builder, start, end)) {
         val fontFamily = variant.fontFamily.ifEmpty { factory.styleCache.linkFontFamily }.ifEmpty { blockStyle.fontFamily }
         val font = fontProbe.apply { applyBlockStyleFont(blockStyle.copy(fontFamily = fontFamily), factory.context) }
+        val content = config.style.linkPillContent[url]
+        val originalText = builder.subSequence(start, end).toString()
+        val pillEnd =
+          if (variant.pill.wrap && content?.label.isNullOrEmpty() &&
+            variant.pill.content.label
+              .isEmpty()
+          ) {
+            characterBoundaries.setText(originalText)
+            start + characterBoundaries.following(0)
+          } else {
+            end
+          }
         val pill =
           LinkPillSpan(
             variant,
             font.typeface,
             blockStyle.fontSize,
-            builder.subSequence(start, end).toString(),
+            builder.subSequence(start, pillEnd).toString(),
             factory.context,
-            config.style.linkPillContent[url],
+            content,
             config.style.imageRequestHeaders,
             followsRunTypeface = variant.fontFamily.isEmpty() && factory.styleCache.linkFontFamily.isEmpty(),
           )
         // Set directly, not deferred: the pill measures with its own font, so it does not
         // need to come after the block spans, and a late insertion makes the builder re-sort.
-        builder.setSpan(pill, start, end, SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE)
+        builder.setSpan(pill, start, pillEnd, SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE)
         factory.runAfterRender { text -> pill.resolveLeadingMargin(text, text.getSpanStart(pill), text.getSpanEnd(pill)) }
       }
       builder.setSpan(
@@ -76,6 +91,7 @@ class LinkRenderer(
     start: Int,
     end: Int,
   ): Boolean {
+    if (start == end) return false
     if (builder.getSpans(start, end, ReplacementSpan::class.java).isNotEmpty()) return false
     if (builder.getSpans(start, end, SpoilerSpan::class.java).isNotEmpty()) return false
     for (index in start until end) {

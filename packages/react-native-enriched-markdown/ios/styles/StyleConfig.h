@@ -5,6 +5,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Pill presentation of a link variant: geometry plus the variant-wide default label and icon.
 @interface LinkPillConfig : NSObject
+@property (nonatomic, assign) BOOL wrap;
 @property (nonatomic, copy) NSString *label;
 @property (nonatomic, copy) NSString *iconUri;
 /// Nil keeps the icon's own colors.

@@ -55,7 +55,8 @@ try {
   cpSync(path.join(root, 'packages/core/cpp'), path.join(staging, 'cpp'), {
     recursive: true,
     filter: (file) =>
-      !['grammars', 'tree-sitter', 'build'].includes(path.basename(file)),
+      !['grammars', 'tree-sitter', 'build'].includes(path.basename(file)) &&
+      !path.basename(file).startsWith('generated-'),
   });
   for (const entry of ['gen-registry.mjs', 'grammar-versions.json'])
     cpSync(
@@ -86,7 +87,7 @@ try {
     path.join(staging, 't3-fork.json'),
     JSON.stringify(
       {
-        repository: 'https://github.com/pingdotgg/enriched-markdown',
+        repository: 'https://github.com/PixPMusic/enriched-markdown',
         commit: git('rev-parse', 'HEAD'),
         upstreamCommit: '69c3330dd6d75cacd8d046f4e0c4b8fe5c42a6e1',
         version: pkg.version,

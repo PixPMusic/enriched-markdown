@@ -149,8 +149,18 @@ static NSRange ENRMCollapseLinkIntoPill(NSMutableAttributedString *output, NSRan
     [output addAttribute:NSBackgroundColorAttributeName value:backgroundColor range:range];
 
 #if !TARGET_OS_OSX
-  if (willBePill)
-    range = ENRMCollapseLinkIntoPill(output, range, url, variant, _config, context);
+  if (willBePill) {
+    LinkPillContent *content = [_config linkPillContent][url];
+    if (variant.pill.wrap && content.label.length == 0 && variant.pill.label.length == 0) {
+      NSString *label = [output.string substringWithRange:range];
+      NSRange first = [label rangeOfComposedCharacterSequenceAtIndex:0];
+      first.location += range.location;
+      ENRMCollapseLinkIntoPill(output, first, url, variant, _config, context);
+      range.length -= first.length - 1;
+    } else {
+      range = ENRMCollapseLinkIntoPill(output, range, url, variant, _config, context);
+    }
+  }
 #endif
   [context registerLinkRange:range url:url];
 }

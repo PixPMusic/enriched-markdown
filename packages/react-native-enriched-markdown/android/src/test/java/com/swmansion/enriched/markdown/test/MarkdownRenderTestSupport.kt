@@ -32,6 +32,7 @@ object MarkdownRenderTestSupport {
   fun styleConfig(
     list: Map<String, Any> = emptyMap(),
     taskList: Map<String, Any> = emptyMap(),
+    linkVariants: JavaOnlyArray? = null,
   ): StyleConfig {
     DisplayMetricsHolder.initDisplayMetricsIfNotInitialized(context)
     val style = JavaOnlyMap()
@@ -40,7 +41,7 @@ object MarkdownRenderTestSupport {
     style.putMap("link", textElement().apply { putString("fontFamily", "serif") })
     style.putArray(
       "linkVariants",
-      JavaOnlyArray.of(
+      linkVariants ?: JavaOnlyArray.of(
         textElement().apply {
           putString("pattern", "^ref:")
           putString("fontFamily", "monospace")

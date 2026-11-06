@@ -9,6 +9,7 @@ import com.facebook.react.bridge.ReadableMap
 /** Geometry and default content of a variant's pill. Dimensions are in pixels. */
 data class LinkPillStyle(
   val content: LinkPillContent = LinkPillContent(),
+  val wrap: Boolean = false,
   val borderRadius: Float = 8f,
   val paddingHorizontal: Float = 6f,
   val paddingVertical: Float = 2f,
@@ -29,6 +30,7 @@ data class LinkPillStyle(
     ): LinkPillStyle? {
       if (!parser.parseBoolean(map, "enabled")) return null
       return LinkPillStyle(
+        wrap = parser.parseBoolean(map, "wrap"),
         content =
           LinkPillContent.fromReadableMap(map).copy(iconTintColor = parser.parseOptionalColor(map, "iconTintColor")),
         borderRadius = parser.toPixelFromDIP(parser.parseOptionalDouble(map, "borderRadius", 8.0).toFloat()),

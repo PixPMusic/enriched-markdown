@@ -123,11 +123,13 @@ export interface LinkStyle {
 }
 
 export type LinkVariantStyle = LinkStyle & {
-  /** Native atomic presentation. True uses defaults; an object enables overrides. */
+  /** Native icon and pill presentation. True uses defaults; an object enables overrides. */
   pill?: boolean | LinkPillStyle;
 };
 
 export interface LinkPillStyle {
+  /** Allow the original label to wrap beside its icon. Replacement labels stay atomic. */
+  wrap?: boolean;
   /** Visible text, also included in the accessible name alongside original link text. */
   label?: string;
   /** Local file, bundled asset or `http(s)` URL. A source that fails shows no icon. */
