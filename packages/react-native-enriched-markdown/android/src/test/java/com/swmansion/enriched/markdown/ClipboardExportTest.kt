@@ -116,17 +116,22 @@ class ClipboardExportTest {
         setupAsMarkdownTextView()
         setText(rendered, TextView.BufferType.SPANNABLE)
       }
-    Selection.setSelection(view.text as Spannable, rendered.getSpanStart(target), rendered.getSpanEnd(target))
+    val linkStart = rendered.getSpanStart(target)
+    val linkEnd = rendered.getSpanEnd(target)
     val event = KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_C, 0, KeyEvent.META_CTRL_ON)
-    assertTrue(view.onKeyShortcut(KeyEvent.KEYCODE_C, event))
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    assertEquals(
-      label,
-      clipboard.primaryClip!!
-        .getItemAt(0)
-        .text
-        .toString(),
-    )
+    for ((start, end) in listOf(linkStart to linkEnd, linkEnd to linkStart)) {
+      Selection.setSelection(view.text as Spannable, start, end)
+      assertTrue(view.onKeyShortcut(KeyEvent.KEYCODE_C, event))
+      assertEquals(
+        "$start -> $end",
+        label,
+        clipboard.primaryClip!!
+          .getItemAt(0)
+          .text
+          .toString(),
+      )
+    }
   }
 
   private fun style(): StyleConfig {

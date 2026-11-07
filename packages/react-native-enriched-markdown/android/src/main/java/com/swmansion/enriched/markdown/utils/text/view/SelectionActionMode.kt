@@ -174,8 +174,8 @@ fun createSelectionActionModeCallback(
 
 /** Copies selection as both plain text and HTML with inline styles. */
 internal fun TextView.copyWithHTML(): Boolean {
-  val start = selectionStart
-  val end = selectionEnd
+  val start = minOf(selectionStart, selectionEnd)
+  val end = maxOf(selectionStart, selectionEnd)
   if (start < 0 || end < 0 || start >= end) return false
 
   val spannable = text as? Spannable ?: return false
