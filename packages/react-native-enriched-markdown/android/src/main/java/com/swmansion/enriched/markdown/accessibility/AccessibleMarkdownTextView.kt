@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import androidx.appcompat.widget.AppCompatTextView
 import com.swmansion.enriched.markdown.spans.LinkPillSpan
 import com.swmansion.enriched.markdown.utils.text.span.prepareWidthAwareSpans
+import com.swmansion.enriched.markdown.utils.text.view.copyWithHTML
 
 /** AppCompatTextView with built-in TalkBack support via MarkdownAccessibilityHelper. */
 abstract class AccessibleMarkdownTextView
@@ -51,6 +52,9 @@ abstract class AccessibleMarkdownTextView
     private fun dropTextLayout() {
       breakStrategy = breakStrategy
     }
+
+    override fun onTextContextMenuItem(id: Int): Boolean =
+      if (id == android.R.id.copy && copyWithHTML()) true else super.onTextContextMenuItem(id)
 
     override fun dispatchHoverEvent(event: MotionEvent): Boolean =
       accessibilityHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event)

@@ -1,14 +1,28 @@
 package com.swmansion.enriched.markdown
 
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Color
 import android.text.Layout
+import android.text.Selection
+import android.text.Spannable
 import android.text.SpannableString
+import android.view.ContextThemeWrapper
+import android.view.KeyEvent
+import android.widget.TextView
+import com.facebook.react.bridge.JavaOnlyArray
 import com.facebook.react.bridge.JavaOnlyMap
+import com.swmansion.enriched.markdown.accessibility.AccessibleMarkdownTextView
 import com.swmansion.enriched.markdown.parser.MarkdownASTNode
 import com.swmansion.enriched.markdown.renderer.Renderer
+import com.swmansion.enriched.markdown.spans.LinkSpan
 import com.swmansion.enriched.markdown.styles.StyleConfig
+import com.swmansion.enriched.markdown.test.MarkdownRenderTestSupport
+import com.swmansion.enriched.markdown.test.TestAstFactory.paragraph
+import com.swmansion.enriched.markdown.test.TestAstFactory.text
 import com.swmansion.enriched.markdown.utils.common.serialization.MarkdownASTSerializer
 import com.swmansion.enriched.markdown.utils.text.conversion.HTMLGenerator
+import com.swmansion.enriched.markdown.utils.text.view.setupAsMarkdownTextView
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -68,6 +82,51 @@ class ClipboardExportTest {
     val strong = MarkdownASTNode(MarkdownASTNode.NodeType.Strong, children = listOf(formula))
     val nestedCell = MarkdownASTNode(MarkdownASTNode.NodeType.TableCell, children = listOf(strong))
     assertEquals("**\$x_1\$**", MarkdownASTSerializer.serializeChildren(nestedCell))
+  }
+
+  @Test
+  fun keyboardCopyOmitsLinkIconDecorations() {
+    val label = "مرحبا بالعالم"
+    val url = "https://github.com/example/project/pull/1"
+    val style =
+      MarkdownRenderTestSupport.styleConfig(
+        linkVariants =
+          JavaOnlyArray.of(
+            JavaOnlyMap.of(
+              "pattern",
+              "^https:",
+              "fontFamily",
+              "sans-serif",
+              "color",
+              Color.BLUE,
+              "underline",
+              false,
+              "backgroundColor",
+              Color.TRANSPARENT,
+              "pill",
+              JavaOnlyMap.of("enabled", true, "wrap", true),
+            ),
+          ),
+      )
+    val link = MarkdownASTNode(MarkdownASTNode.NodeType.Link, attributes = mapOf("url" to url), children = listOf(text(label)))
+    val rendered = MarkdownRenderTestSupport.render(style, paragraph(text("Review: "), link, text(" afterward.")))
+    val target = rendered.getSpans(0, rendered.length, LinkSpan::class.java).single()
+    val view =
+      object : AccessibleMarkdownTextView(ContextThemeWrapper(context, androidx.appcompat.R.style.Theme_AppCompat)) {}.apply {
+        setupAsMarkdownTextView()
+        setText(rendered, TextView.BufferType.SPANNABLE)
+      }
+    Selection.setSelection(view.text as Spannable, rendered.getSpanStart(target), rendered.getSpanEnd(target))
+    val event = KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_C, 0, KeyEvent.META_CTRL_ON)
+    assertTrue(view.onKeyShortcut(KeyEvent.KEYCODE_C, event))
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    assertEquals(
+      label,
+      clipboard.primaryClip!!
+        .getItemAt(0)
+        .text
+        .toString(),
+    )
   }
 
   private fun style(): StyleConfig {

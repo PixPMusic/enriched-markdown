@@ -173,12 +173,12 @@ fun createSelectionActionModeCallback(
   }
 
 /** Copies selection as both plain text and HTML with inline styles. */
-private fun TextView.copyWithHTML() {
+internal fun TextView.copyWithHTML(): Boolean {
   val start = selectionStart
   val end = selectionEnd
-  if (start < 0 || end < 0 || start >= end) return
+  if (start < 0 || end < 0 || start >= end) return false
 
-  val spannable = text as? Spannable ?: return
+  val spannable = text as? Spannable ?: return false
   val selectedText = LinkPillSpan.withoutIcons(android.text.SpannableStringBuilder(spannable, start, end))
   val plainText = selectedText.toString()
 
@@ -186,10 +186,10 @@ private fun TextView.copyWithHTML() {
     (this as? EnrichedMarkdownText)?.markdownStyle
       ?: findParentMarkdownStyle()
   val config = styleConfig?.selectionClipboard ?: SelectionClipboardConfig()
-  val canonical = (selectedText as? android.text.Spanned)?.let { canonicalClipboardText(it, config) }
+  val canonical = canonicalClipboardText(selectedText, config)
   val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
-  if (styleConfig != null && selectedText is Spannable) {
+  if (styleConfig != null) {
     // Density values convert device pixels back to CSS pixels
     val displayMetrics = context.resources.displayMetrics
     val isRTL = context.resources.isLayoutRTL()
@@ -217,6 +217,7 @@ private fun TextView.copyWithHTML() {
   } else {
     clipboard.setPrimaryClip(ClipData.newPlainText("Text", canonical ?: plainText))
   }
+  return true
 }
 
 private fun TextView.copyMarkdownToClipboard() {
