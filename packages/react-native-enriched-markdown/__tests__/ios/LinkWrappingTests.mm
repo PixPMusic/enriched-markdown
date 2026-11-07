@@ -14,7 +14,12 @@
 - (void)testWrappedLabelsKeepTheirTextAndFullLinkRange
 {
   NSString *url = @"https://github.com/example/project/pull/1";
-  for (NSString *first in @[ @"e\u0301", @"👩🏽‍💻" ]) {
+  for (NSArray *testCase in @[
+         @[ @"e\u0301", @YES ], @[ @"👩🏽‍💻", @YES ], @[ @"مرحبا", @NO ], @[ @"مَرْحَبًا", @NO ],
+         @[ @"ܫܠܡܐ", @NO ], @[ @"ߊߘߌ", @NO ], @[ @"\u200Dمرحبا", @NO ]
+       ]) {
+    NSString *first = testCase[0];
+    BOOL canSplit = [testCase[1] boolValue];
     NSString *label =
         [first stringByAppendingString:@" explicitly took over on October twenty second and continued the review"];
     for (NSNumber *fontSize in @[ @18, @24, @36 ]) {
@@ -44,11 +49,13 @@
                                                      block:nil];
       ENRMLinkPillAttachment *attachment = [rendered attribute:NSAttachmentAttributeName atIndex:0 effectiveRange:NULL];
       XCTAssertTrue([attachment isKindOfClass:ENRMLinkPillAttachment.class]);
-      XCTAssertEqualObjects(attachment.originalText.string, first);
+      XCTAssertEqualObjects(attachment.originalText.string, canSplit ? first : label);
       XCTAssertEqualObjects(ENRMStringByExpandingLinkPills(rendered), label);
       NSRange linkRange;
       XCTAssertEqualObjects([rendered attribute:NSLinkAttributeName atIndex:0 effectiveRange:&linkRange], url);
       XCTAssertEqual(linkRange.length, rendered.length);
+      if (!canSplit)
+        continue;
       NSTextStorage *storage = [[NSTextStorage alloc] initWithAttributedString:rendered];
       NSLayoutManager *layout = [[NSLayoutManager alloc] init];
       NSTextContainer *container = [[NSTextContainer alloc] initWithSize:CGSizeMake(240, CGFLOAT_MAX)];

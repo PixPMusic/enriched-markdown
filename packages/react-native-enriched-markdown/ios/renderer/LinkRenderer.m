@@ -10,6 +10,19 @@
 #import <React/RCTFont.h>
 
 #if !TARGET_OS_OSX
+static BOOL ENRMNeedsJoiningContext(NSString *label, NSRange first)
+{
+  // Cursive joining must not cross the attachment's shaping boundary.
+  static NSRegularExpression *joining;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    joining = [NSRegularExpression regularExpressionWithPattern:@"[\\p{jt=D}\\p{jt=L}\\p{jt=R}\\p{jt=C}]\\p{jt=T}*$"
+                                                        options:0
+                                                          error:NULL];
+  });
+  return [joining firstMatchInString:label options:0 range:first] != nil;
+}
+
 static BOOL ENRMRangeHasAttribute(NSAttributedString *text, NSRange range, NSAttributedStringKey key)
 {
   __block BOOL found = NO;
@@ -151,15 +164,17 @@ static NSRange ENRMCollapseLinkIntoPill(NSMutableAttributedString *output, NSRan
 #if !TARGET_OS_OSX
   if (willBePill) {
     LinkPillContent *content = [_config linkPillContent][url];
+    NSRange pillRange = range;
     if (variant.pill.wrap && content.label.length == 0 && variant.pill.label.length == 0) {
       NSString *label = [output.string substringWithRange:range];
       NSRange first = [label rangeOfComposedCharacterSequenceAtIndex:0];
-      first.location += range.location;
-      ENRMCollapseLinkIntoPill(output, first, url, variant, _config, context);
-      range.length -= first.length - 1;
-    } else {
-      range = ENRMCollapseLinkIntoPill(output, range, url, variant, _config, context);
+      if (!ENRMNeedsJoiningContext(label, first)) {
+        first.location += range.location;
+        pillRange = first;
+      }
     }
+    ENRMCollapseLinkIntoPill(output, pillRange, url, variant, _config, context);
+    range.length -= pillRange.length - 1;
   }
 #endif
   [context registerLinkRange:range url:url];

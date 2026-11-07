@@ -1,5 +1,7 @@
 package com.swmansion.enriched.markdown.renderer
 
+import android.icu.lang.UCharacter
+import android.icu.lang.UProperty
 import android.icu.text.BreakIterator
 import android.text.SpannableStringBuilder
 import android.text.TextPaint
@@ -42,7 +44,8 @@ class LinkRenderer(
               .isEmpty()
           ) {
             characterBoundaries.setText(originalText)
-            start + characterBoundaries.following(0)
+            val firstEnd = characterBoundaries.following(0)
+            if (needsJoiningContext(originalText, firstEnd)) end else start + firstEnd
           } else {
             end
           }
@@ -78,6 +81,21 @@ class LinkRenderer(
         SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE,
       )
     }
+  }
+
+  // Cursive joining must not cross the replacement span's shaping boundary.
+  private fun needsJoiningContext(
+    text: String,
+    end: Int,
+  ): Boolean {
+    var offset = end
+    while (offset > 0) {
+      val codePoint = Character.codePointBefore(text, offset)
+      val joining = UCharacter.getIntPropertyValue(codePoint, UProperty.JOINING_TYPE)
+      if (joining != UCharacter.JoiningType.TRANSPARENT) return joining != UCharacter.JoiningType.NON_JOINING
+      offset -= Character.charCount(codePoint)
+    }
+    return false
   }
 
   /**

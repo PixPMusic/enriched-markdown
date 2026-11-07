@@ -34,14 +34,22 @@ import java.io.File
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LinkWrappingTest {
   @Test
-  fun decoratedProseWrapsWithoutLosingItsIconTextOrLinkTarget() {
+  fun decoratedProseKeepsItsIconTextLinkTargetAndShapingContext() {
     val context = RuntimeEnvironment.getApplication()
     val iconFile = File(context.cacheDir, "link-wrapping-icon.png")
     val icon = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.GREEN) }
     iconFile.outputStream().use { icon.compress(Bitmap.CompressFormat.PNG, 100, it) }
     try {
       for (fontScale in listOf(1f, 1.3f, 2f)) {
-        for (first in listOf("e\u0301", "👩🏽‍💻")) {
+        for ((first, canSplit) in listOf(
+          "e\u0301" to true,
+          "👩🏽‍💻" to true,
+          "مرحبا" to false,
+          "مَرْحَبًا" to false,
+          "ܫܠܡܐ" to false,
+          "ߊߘߌ" to false,
+          "\u200Dمرحبا" to false,
+        )) {
           for (inList in listOf(false, true)) {
             val label = "$first explicitly took over on October twenty second and continued the review"
             val variant =
@@ -84,8 +92,10 @@ class LinkWrappingTest {
             assertEquals(url, target.url)
             assertEquals(label.length, rendered.getSpanEnd(target) - start)
             assertEquals(start, rendered.getSpanStart(pill))
-            assertEquals(first.length, rendered.getSpanEnd(pill) - start)
-            assertIconAndWrappedLines(rendered, 240, 18f * fontScale, "$first / $fontScale / list $inList")
+            assertEquals(if (canSplit) first.length else label.length, rendered.getSpanEnd(pill) - start)
+            if (canSplit) {
+              assertIconAndWrappedLines(rendered, 240, 18f * fontScale, "$first / $fontScale / list $inList")
+            }
           }
         }
       }
