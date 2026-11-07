@@ -51,7 +51,11 @@
       XCTAssertEqualObjects([rendered.string substringFromIndex:2], label);
       XCTAssertEqualObjects(ENRMStringByExpandingLinkPills(rendered), label);
       NSRange linkRange;
-      XCTAssertEqualObjects([rendered attribute:NSLinkAttributeName atIndex:0 effectiveRange:&linkRange], url);
+      XCTAssertEqualObjects([rendered attribute:NSLinkAttributeName
+                                              atIndex:0
+                                longestEffectiveRange:&linkRange
+                                              inRange:NSMakeRange(0, rendered.length)],
+                            url);
       XCTAssertEqual(linkRange.length, rendered.length);
       NSTextStorage *storage = [[NSTextStorage alloc] initWithAttributedString:rendered];
       NSLayoutManager *layout = [[NSLayoutManager alloc] init];
