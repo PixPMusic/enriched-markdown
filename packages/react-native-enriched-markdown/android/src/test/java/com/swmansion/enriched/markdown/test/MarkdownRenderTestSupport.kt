@@ -36,8 +36,9 @@ object MarkdownRenderTestSupport {
   ): StyleConfig {
     DisplayMetricsHolder.initDisplayMetricsIfNotInitialized(context)
     val style = JavaOnlyMap()
-    listOf("paragraph", "strong", "em", "strikethrough", "code", "superscript", "subscript", "highlight")
+    listOf("paragraph", "strong", "em", "strikethrough", "code", "superscript", "subscript", "highlight", "underline", "codeBlock", "image")
       .forEach { style.putMap(it, textElement()) }
+    for (level in 1..6) style.putMap("h$level", textElement())
     style.putMap("link", textElement().apply { putString("fontFamily", "serif") })
     style.putArray(
       "linkVariants",
@@ -92,6 +93,20 @@ object MarkdownRenderTestSupport {
 
   private fun textElement(): JavaOnlyMap =
     JavaOnlyMap.of(
+      "padding",
+      0.0,
+      "borderRadius",
+      0.0,
+      "borderWidth",
+      0.0,
+      "height",
+      0.0,
+      "maxHeight",
+      0.0,
+      "aspectRatio",
+      0.0,
+      "resizeMode",
+      "contain",
       "fontFamily",
       "",
       "fontWeight",

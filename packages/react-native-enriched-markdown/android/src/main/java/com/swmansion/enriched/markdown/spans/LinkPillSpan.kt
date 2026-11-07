@@ -12,6 +12,7 @@ import android.graphics.Typeface
 import android.os.Build
 import android.os.Looper
 import android.text.Spannable
+import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextPaint
 import android.text.TextUtils
@@ -31,7 +32,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Draws an atomic visual over the original link text, without changing stored characters.
+ * Draws an atomic pill or icon decoration; [withoutIcons] removes decorations from exported text.
  *
  * Presentation comes from the [variant]; [content] is what this particular link shows
  * and wins over the variant's label and icon, which win over the link text.
@@ -327,7 +328,19 @@ class LinkPillSpan(
     return ellipsizedLabel
   }
 
+  class IconText
+
   companion object {
+    fun withoutIcons(text: Spannable): Spannable {
+      val icons = text.getSpans(0, text.length, IconText::class.java).toList()
+      if (icons.isEmpty()) return text
+      return SpannableStringBuilder(text).apply {
+        icons.sortedByDescending { text.getSpanStart(it) }.forEach {
+          delete(getSpanStart(it), getSpanEnd(it))
+        }
+      }
+    }
+
     // The icon occupies a square of the label's font size plus a quarter of it as a gap.
     private const val ICON_SLOT_RATIO = 1.25f
 

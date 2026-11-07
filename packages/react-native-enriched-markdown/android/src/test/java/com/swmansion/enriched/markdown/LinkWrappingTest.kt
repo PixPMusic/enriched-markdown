@@ -18,6 +18,8 @@ import com.swmansion.enriched.markdown.test.TestAstFactory.listItem
 import com.swmansion.enriched.markdown.test.TestAstFactory.paragraph
 import com.swmansion.enriched.markdown.test.TestAstFactory.text
 import com.swmansion.enriched.markdown.test.TestAstFactory.unorderedList
+import com.swmansion.enriched.markdown.utils.text.conversion.HTMLGenerator
+import com.swmansion.enriched.markdown.utils.text.conversion.MarkdownExtractor
 import com.swmansion.enriched.markdown.utils.text.span.prepareWidthAwareSpans
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -41,14 +43,15 @@ class LinkWrappingTest {
     iconFile.outputStream().use { icon.compress(Bitmap.CompressFormat.PNG, 100, it) }
     try {
       for (fontScale in listOf(1f, 1.3f, 2f)) {
-        for ((first, canSplit) in listOf(
-          "e\u0301" to true,
-          "👩🏽‍💻" to true,
-          "مرحبا" to false,
-          "مَرْحَبًا" to false,
-          "ܫܠܡܐ" to false,
-          "ߊߘߌ" to false,
-          "\u200Dمرحبا" to false,
+        for (first in listOf(
+          "e\u0301",
+          "👩🏽‍💻",
+          "مرحبا",
+          "مَرْحَبًا",
+          "ܫܠܡܐ",
+          "ߊߘߌ",
+          "\u200Dمرحبا",
+          "م".repeat(100),
         )) {
           for (inList in listOf(false, true)) {
             val label = "$first explicitly took over on October twenty second and continued the review"
@@ -88,14 +91,19 @@ class LinkWrappingTest {
             val pill = rendered.getSpans(0, rendered.length, LinkPillSpan::class.java).single()
             val target = rendered.getSpans(0, rendered.length, LinkSpan::class.java).single()
             val start = rendered.getSpanStart(target)
-            assertEquals("Review: $label afterward.", rendered.toString())
+            assertEquals("Review: $label afterward.", LinkPillSpan.withoutIcons(rendered).toString())
+            assertEquals(label, rendered.subSequence(start + 2, rendered.getSpanEnd(target)).toString())
             assertEquals(url, target.url)
-            assertEquals(label.length, rendered.getSpanEnd(target) - start)
+            assertEquals(label.length + 2, rendered.getSpanEnd(target) - start)
             assertEquals(start, rendered.getSpanStart(pill))
-            assertEquals(if (canSplit) first.length else label.length, rendered.getSpanEnd(pill) - start)
-            if (canSplit) {
-              assertIconAndWrappedLines(rendered, 240, 18f * fontScale, "$first / $fontScale / list $inList")
-            }
+            assertEquals(1, rendered.getSpanEnd(pill) - start)
+            val copiedMarkdown = MarkdownExtractor.extractFromSpannable(rendered, start, rendered.getSpanEnd(target))
+            assertEquals((if (inList) "- " else "") + "[$label]($url)", copiedMarkdown)
+            val html = HTMLGenerator.generateHTML(rendered, style, 1f, 1f, false)
+            assertTrue(html.contains(label))
+            assertTrue(html.contains(url))
+            assertTrue(!html.contains('\uFFFC') && !html.contains('\u2060'))
+            assertIconAndWrappedLines(rendered, 240, 18f * fontScale, "$first / $fontScale / list $inList")
           }
         }
       }
@@ -117,13 +125,37 @@ class LinkWrappingTest {
         .obtain(rendered, 0, rendered.length, TextPaint().apply { textSize = fontSize }, width)
         .setIncludePad(false)
         .build()
-    assertTrue("The full label must wrap", layout.lineCount > 1)
+    val link = rendered.getSpans(0, rendered.length, LinkSpan::class.java).single()
+    val icon = rendered.getSpans(0, rendered.length, LinkPillSpan::class.java).single()
+    assertEquals(
+      "$case / The icon must stay on the label's first line",
+      layout.getLineForOffset(rendered.getSpanStart(icon)),
+      layout.getLineForOffset(rendered.getSpanEnd(icon) + 1),
+    )
+    assertTrue(
+      "$case / The link label itself must span multiple lines",
+      layout.getLineForOffset(rendered.getSpanEnd(link) - 1) > layout.getLineForOffset(rendered.getSpanStart(link)),
+    )
+    val plain = LinkPillSpan.withoutIcons(rendered)
+    val plainLayout =
+      StaticLayout.Builder
+        .obtain(
+          plain,
+          0,
+          plain.length,
+          TextPaint().apply {
+            textSize = fontSize
+          },
+          width,
+        ).setIncludePad(false)
+        .build()
+    val plainRight = (0 until plainLayout.lineCount).maxOf { plainLayout.getLineRight(it) }
     for (line in 0 until layout.lineCount) {
       assertTrue(
         "$case / Line $line exceeds $width: ${layout.getLineRight(
           line,
         )} / ${rendered.subSequence(layout.getLineStart(line), layout.getLineEnd(line))}",
-        layout.getLineRight(line) <= width + 1,
+        layout.getLineRight(line) <= maxOf(width.toFloat(), plainRight) + 1,
       )
     }
     val bitmap = Bitmap.createBitmap(width, layout.height, Bitmap.Config.ARGB_8888)

@@ -1,8 +1,5 @@
 package com.swmansion.enriched.markdown.renderer
 
-import android.icu.lang.UCharacter
-import android.icu.lang.UProperty
-import android.icu.text.BreakIterator
 import android.text.SpannableStringBuilder
 import android.text.TextPaint
 import android.text.style.ReplacementSpan
@@ -12,14 +9,12 @@ import com.swmansion.enriched.markdown.spans.LinkSpan
 import com.swmansion.enriched.markdown.spans.SpoilerSpan
 import com.swmansion.enriched.markdown.utils.text.extensions.applyBlockStyleFont
 import com.swmansion.enriched.markdown.utils.text.span.SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE
-import java.util.Locale
 
 class LinkRenderer(
   private val config: RendererConfig,
 ) : NodeRenderer {
   // Reused to resolve each pill's typeface; a renderer serves one render at a time.
   private val fontProbe = TextPaint()
-  private val characterBoundaries by lazy { BreakIterator.getCharacterInstance(Locale.ROOT) }
 
   override fun render(
     node: MarkdownASTNode,
@@ -32,29 +27,30 @@ class LinkRenderer(
     val recognizedLink = node.getAttribute("recognizedLink") == "true"
 
     factory.renderWithSpan(builder, { factory.renderChildren(node, builder, onLinkPress, onLinkLongPress) }) { start, end, blockStyle ->
+      var linkEnd = end
       val variant = factory.styleCache.resolvedVariantForUrl(url)
       if (variant?.pill != null && canPresentAsPill(builder, start, end)) {
         val fontFamily = variant.fontFamily.ifEmpty { factory.styleCache.linkFontFamily }.ifEmpty { blockStyle.fontFamily }
         val font = fontProbe.apply { applyBlockStyleFont(blockStyle.copy(fontFamily = fontFamily), factory.context) }
         val content = config.style.linkPillContent[url]
-        val originalText = builder.subSequence(start, end).toString()
-        val pillEnd =
-          if (variant.pill.wrap && content?.label.isNullOrEmpty() &&
+        val iconOnly =
+          variant.pill.wrap && content?.label.isNullOrEmpty() &&
             variant.pill.content.label
               .isEmpty()
-          ) {
-            characterBoundaries.setText(originalText)
-            val firstEnd = characterBoundaries.following(0)
-            if (needsJoiningContext(originalText, firstEnd)) end else start + firstEnd
-          } else {
-            end
-          }
+        if (iconOnly) {
+          // Keep all label characters in native shaping; the joiner binds its icon to the first line.
+          builder.insert(start, "\uFFFC\u2060")
+          factory.shiftDeferredSpans(start, 2)
+          builder.setSpan(LinkPillSpan.IconText(), start, start + 2, SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE)
+          linkEnd += 2
+        }
+        val pillEnd = if (iconOnly) start + 1 else end
         val pill =
           LinkPillSpan(
             variant,
             font.typeface,
             blockStyle.fontSize,
-            builder.subSequence(start, pillEnd).toString(),
+            if (iconOnly) "" else builder.subSequence(start, pillEnd).toString(),
             factory.context,
             content,
             config.style.imageRequestHeaders,
@@ -77,25 +73,10 @@ class LinkRenderer(
           keepsCodeFont = recognizedLink && node.children.any { it.type == MarkdownASTNode.NodeType.Code },
         ),
         start,
-        end,
+        linkEnd,
         SPAN_FLAGS_EXCLUSIVE_EXCLUSIVE,
       )
     }
-  }
-
-  // Cursive joining must not cross the replacement span's shaping boundary.
-  private fun needsJoiningContext(
-    text: String,
-    end: Int,
-  ): Boolean {
-    var offset = end
-    while (offset > 0) {
-      val codePoint = Character.codePointBefore(text, offset)
-      val joining = UCharacter.getIntPropertyValue(codePoint, UProperty.JOINING_TYPE)
-      if (joining != UCharacter.JoiningType.TRANSPARENT) return joining != UCharacter.JoiningType.NON_JOINING
-      offset -= Character.charCount(codePoint)
-    }
-    return false
   }
 
   /**

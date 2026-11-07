@@ -1,6 +1,7 @@
 package com.swmansion.enriched.markdown.utils.text.conversion
 
 import android.text.Spannable
+import android.text.SpannableStringBuilder
 import android.text.style.UnderlineSpan
 import android.widget.TextView
 import com.swmansion.enriched.markdown.EnrichedMarkdownText
@@ -13,6 +14,7 @@ import com.swmansion.enriched.markdown.spans.EmphasisSpan
 import com.swmansion.enriched.markdown.spans.HeadingSpan
 import com.swmansion.enriched.markdown.spans.HighlightSpan
 import com.swmansion.enriched.markdown.spans.ImageSpan
+import com.swmansion.enriched.markdown.spans.LinkPillSpan
 import com.swmansion.enriched.markdown.spans.LinkSpan
 import com.swmansion.enriched.markdown.spans.OrderedListSpan
 import com.swmansion.enriched.markdown.spans.StrikethroughSpan
@@ -49,18 +51,19 @@ object MarkdownExtractor {
     start: Int,
     end: Int,
   ): String {
+    val text = LinkPillSpan.withoutIcons(SpannableStringBuilder(spannable, start, end))
     val result = StringBuilder()
     val state = ExtractionState()
     val headingAccumulator = HeadingAccumulator()
 
-    var i = start
-    while (i < end) {
-      val nextTransition = spannable.nextSpanTransition(i, end, Any::class.java)
-      val segmentText = spannable.subSequence(i, nextTransition).toString()
+    var i = 0
+    while (i < text.length) {
+      val nextTransition = text.nextSpanTransition(i, text.length, Any::class.java)
+      val segmentText = text.subSequence(i, nextTransition).toString()
 
       val handled =
         processSegment(
-          spannable = spannable,
+          spannable = text,
           segmentText = segmentText,
           segmentStart = i,
           segmentEnd = nextTransition,
@@ -71,7 +74,7 @@ object MarkdownExtractor {
 
       if (!handled) {
         // Regular text segment - apply inline formatting and block prefixes
-        appendFormattedSegment(spannable, segmentText, i, nextTransition, result, state)
+        appendFormattedSegment(text, segmentText, i, nextTransition, result, state)
       }
 
       i = nextTransition

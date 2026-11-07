@@ -12,6 +12,7 @@ import android.widget.TextView
 import com.swmansion.enriched.markdown.EnrichedMarkdown
 import com.swmansion.enriched.markdown.EnrichedMarkdownText
 import com.swmansion.enriched.markdown.spans.ImageSpan
+import com.swmansion.enriched.markdown.spans.LinkPillSpan
 import com.swmansion.enriched.markdown.styles.StyleConfig
 import com.swmansion.enriched.markdown.utils.common.layout.isLayoutRTL
 import com.swmansion.enriched.markdown.utils.text.conversion.HTMLGenerator
@@ -152,7 +153,14 @@ fun createSelectionActionModeCallback(
       if (customIndex in customItems.indices) {
         val start = textView.selectionStart
         val end = textView.selectionEnd
-        val selectedText = if (start >= 0 && end > start) textView.text.substring(start, end) else ""
+        val selectedText =
+          if (start >= 0 &&
+            end > start
+          ) {
+            LinkPillSpan.withoutIcons(android.text.SpannableStringBuilder(textView.text, start, end)).toString()
+          } else {
+            ""
+          }
         onCustomItemPress(customItems[customIndex], selectedText, start, end)
         mode?.finish()
         return true
@@ -171,7 +179,7 @@ private fun TextView.copyWithHTML() {
   if (start < 0 || end < 0 || start >= end) return
 
   val spannable = text as? Spannable ?: return
-  val selectedText = spannable.subSequence(start, end)
+  val selectedText = LinkPillSpan.withoutIcons(android.text.SpannableStringBuilder(spannable, start, end))
   val plainText = selectedText.toString()
 
   val styleConfig =

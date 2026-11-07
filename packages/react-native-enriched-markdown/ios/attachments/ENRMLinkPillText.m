@@ -1,6 +1,8 @@
 #import "ENRMLinkPillText.h"
 #import "ENRMLinkPillAttachment.h"
 
+NSAttributedStringKey const ENRMLinkPillIconAttributeName = @"ENRMLinkPillIcon";
+
 #if !TARGET_OS_OSX
 
 /// Inline parents (strong, emphasis) restyle the placeholder's font after the pill was created; carry that over.
@@ -68,24 +70,22 @@ NSAttributedString *ENRMAttributedStringByExpandingLinkPills(NSAttributedString 
 #else
   if (text.length == 0)
     return text;
-  NSMutableArray<NSValue *> *ranges = nil;
-  NSMutableArray<ENRMLinkPillAttachment *> *pills = nil;
+  __block NSMutableArray<NSValue *> *ranges = nil;
+  __block NSMutableArray<ENRMLinkPillAttachment *> *pills = nil;
   NSRange all = NSMakeRange(0, text.length);
-  NSRange cursor = NSMakeRange(0, 0);
-  while (NSMaxRange(cursor) < text.length) {
-    id value = [text attribute:NSAttachmentAttributeName
-                       atIndex:NSMaxRange(cursor)
-         longestEffectiveRange:&cursor
-                       inRange:all];
-    if (![value isKindOfClass:ENRMLinkPillAttachment.class])
-      continue;
-    if (!pills) {
-      ranges = [NSMutableArray new];
-      pills = [NSMutableArray new];
-    }
-    [ranges addObject:[NSValue valueWithRange:cursor]];
-    [pills addObject:value];
-  }
+  [text enumerateAttributesInRange:all
+                           options:0
+                        usingBlock:^(NSDictionary<NSAttributedStringKey, id> *attributes, NSRange range, BOOL *stop) {
+                          id value = attributes[ENRMLinkPillIconAttributeName] ?: attributes[NSAttachmentAttributeName];
+                          if (![value isKindOfClass:ENRMLinkPillAttachment.class])
+                            return;
+                          if (!pills) {
+                            ranges = [NSMutableArray new];
+                            pills = [NSMutableArray new];
+                          }
+                          [ranges addObject:[NSValue valueWithRange:range]];
+                          [pills addObject:value];
+                        }];
   if (!pills)
     return text;
 

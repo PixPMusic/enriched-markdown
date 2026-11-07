@@ -3,6 +3,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+FOUNDATION_EXPORT NSAttributedStringKey const ENRMLinkPillIconAttributeName;
+
 /**
  * In text storage a link pill is one placeholder character. Wherever text leaves the
  * view it must carry the link text again: the Markdown, HTML and RTF exporters expand

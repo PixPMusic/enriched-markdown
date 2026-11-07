@@ -247,7 +247,9 @@ class MarkdownAccessibilityHelper(
         } else {
           null
         }
-      val content = span.imageAltText ?: pill?.accessibilityText ?: spanned.substring(span.start, span.end).trim()
+      val content =
+        span.imageAltText ?: pill?.accessibilityText
+          ?: LinkPillSpan.withoutIcons(android.text.SpannableStringBuilder(spanned, span.start, span.end)).toString().trim()
       if (content.isNotEmpty()) {
         items.add(createSpanItem(nextId++, content, span, spanned))
       }

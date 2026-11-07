@@ -13,6 +13,7 @@ import com.swmansion.enriched.markdown.spans.EmphasisSpan
 import com.swmansion.enriched.markdown.spans.HeadingSpan
 import com.swmansion.enriched.markdown.spans.HighlightSpan
 import com.swmansion.enriched.markdown.spans.ImageSpan
+import com.swmansion.enriched.markdown.spans.LinkPillSpan
 import com.swmansion.enriched.markdown.spans.LinkSpan
 import com.swmansion.enriched.markdown.spans.OrderedListSpan
 import com.swmansion.enriched.markdown.spans.StrikethroughSpan
@@ -257,14 +258,15 @@ object HTMLGenerator {
     density: Float = 1f,
     isRTL: Boolean = false,
   ): String {
-    if (text.isEmpty()) return "<html></html>"
+    val content = LinkPillSpan.withoutIcons(text)
+    if (content.isEmpty()) return "<html></html>"
 
     // Pre-cache all styles (single allocation)
     val styles = CachedStyles(style, scaledDensity, density)
     val state = GeneratorState()
 
     // Estimate capacity (average 2x text length)
-    val html = StringBuilder(text.length * 2)
+    val html = StringBuilder(content.length * 2)
     if (isRTL) {
       html.append("<html dir=\"rtl\">")
       html.append("<div dir=\"rtl\" style=\"direction: rtl; text-align: right;\">")
@@ -273,10 +275,10 @@ object HTMLGenerator {
     }
 
     // Collect paragraphs
-    val paragraphs = collectParagraphs(text)
+    val paragraphs = collectParagraphs(content)
 
     for (para in paragraphs) {
-      processParagraph(html, text, para, styles, state)
+      processParagraph(html, content, para, styles, state)
     }
 
     closeRemainingContainers(html, state, styles)

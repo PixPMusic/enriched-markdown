@@ -1,6 +1,7 @@
 #import "LinkRenderer.h"
 #import "CodeBackground.h"
 #import "ENRMLinkPillAttachment.h"
+#import "ENRMLinkPillText.h"
 #import "ENRMSpoilerTapUtils.h"
 #import "ENRMTextLinkAttributes.h"
 #import "FontUtils.h"
@@ -10,19 +11,6 @@
 #import <React/RCTFont.h>
 
 #if !TARGET_OS_OSX
-static BOOL ENRMNeedsJoiningContext(NSString *label, NSRange first)
-{
-  // Cursive joining must not cross the attachment's shaping boundary.
-  static NSRegularExpression *joining;
-  static dispatch_once_t once;
-  dispatch_once(&once, ^{
-    joining = [NSRegularExpression regularExpressionWithPattern:@"[\\p{jt=D}\\p{jt=L}\\p{jt=R}\\p{jt=C}]\\p{jt=T}*$"
-                                                        options:0
-                                                          error:NULL];
-  });
-  return [joining firstMatchInString:label options:0 range:first] != nil;
-}
-
 static BOOL ENRMRangeHasAttribute(NSAttributedString *text, NSRange range, NSAttributedStringKey key)
 {
   __block BOOL found = NO;
@@ -66,9 +54,15 @@ static NSRange ENRMCollapseLinkIntoPill(NSMutableAttributedString *output, NSRan
     NSStrikethroughStyleAttributeName, CodeAttributeName
   ]];
   placeholder[NSAttachmentAttributeName] = pill;
-  [output replaceCharactersInRange:range
-              withAttributedString:[[NSAttributedString alloc] initWithString:@"\uFFFC" attributes:placeholder]];
-  return NSMakeRange(range.location, 1);
+  NSMutableAttributedString *replacement = [[NSMutableAttributedString alloc] initWithString:@"\uFFFC"
+                                                                                  attributes:placeholder];
+  if (range.length == 0) {
+    [placeholder removeObjectForKey:NSAttachmentAttributeName];
+    [replacement appendAttributedString:[[NSAttributedString alloc] initWithString:@"\u2060" attributes:placeholder]];
+    [replacement addAttribute:ENRMLinkPillIconAttributeName value:pill range:NSMakeRange(0, replacement.length)];
+  }
+  [output replaceCharactersInRange:range withAttributedString:replacement];
+  return NSMakeRange(range.location, replacement.length);
 }
 #endif
 
@@ -165,16 +159,10 @@ static NSRange ENRMCollapseLinkIntoPill(NSMutableAttributedString *output, NSRan
   if (willBePill) {
     LinkPillContent *content = [_config linkPillContent][url];
     NSRange pillRange = range;
-    if (variant.pill.wrap && content.label.length == 0 && variant.pill.label.length == 0) {
-      NSString *label = [output.string substringWithRange:range];
-      NSRange first = [label rangeOfComposedCharacterSequenceAtIndex:0];
-      if (!ENRMNeedsJoiningContext(label, first)) {
-        first.location += range.location;
-        pillRange = first;
-      }
-    }
-    ENRMCollapseLinkIntoPill(output, pillRange, url, variant, _config, context);
-    range.length -= pillRange.length - 1;
+    if (variant.pill.wrap && content.label.length == 0 && variant.pill.label.length == 0)
+      pillRange.length = 0;
+    NSRange replacement = ENRMCollapseLinkIntoPill(output, pillRange, url, variant, _config, context);
+    range.length = range.length - pillRange.length + replacement.length;
   }
 #endif
   [context registerLinkRange:range url:url];
